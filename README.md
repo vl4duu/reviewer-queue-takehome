@@ -189,6 +189,36 @@ Please send us:
    - how you enforced the business rules
    - how you decided what the reviewer should see and do
 
+## Running the implementation
+
+Two terminals.
+
+**Backend** (FastAPI, http://localhost:8000):
+
+```bash
+cd backend
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn app.main:app --reload
+```
+
+**Frontend** (Vite, http://localhost:5173, proxies `/api` to the backend):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+**Tests:**
+
+```bash
+cd backend && .venv/bin/python -m pytest -q
+cd frontend && npm test
+```
+
+See [`NOTES.md`](NOTES.md) for assumptions and tradeoffs.
+
 ## Helpful reference files
 
 - [`data/review_items.json`](data/review_items.json) - seed data
