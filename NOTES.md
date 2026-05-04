@@ -3,8 +3,20 @@
 ## Stack
 
 - Backend: FastAPI + Pydantic v2, in-memory store guarded by an `asyncio.Lock`. Seed loaded once at startup from `data/review_items.json`.
-- Frontend: Vue 3 (`<script setup>`) + Vite + TypeScript. Plain scoped CSS with a token file. No router, no UI library.
+- Frontend: Vue 3 (`<script setup>`) + Vite + TypeScript. Plain scoped CSS with a token file. No router, no UI library. Single-page master-detail layout (queue on the left, selected item on the right).
 - Tests: pytest + `TestClient` cover the rules + queue order matrix.
+
+## Running
+
+Setup and run commands live in [`README.md`](README.md#running-the-implementation) (backend venv + uvicorn, frontend Vite, test commands).
+
+## API surface
+
+- `GET /api/items` — active queue, sorted by `(risk_level, customer_tier, submitted_at)`. Terminal items excluded.
+- `GET /api/items/{id}` — single item (any status), 404 if unknown.
+- `POST /api/items/{id}/transition` body `{ action }` — applies the transition under the store lock. Returns the updated item, `404` on unknown id, `409` with a human-readable `detail` on illegal transition.
+
+The transition endpoint replaced four named action endpoints; the rules live in one place and the frontend has one client function.
 
 ## Assumptions
 
@@ -26,6 +38,16 @@
 
 - **`Store.transition(item_id, action, reviewer)` owns the lock.** The atomic sequence (lookup → apply rules → write back) is one method, so the FastAPI handler only translates `NotFound` / `InvalidTransition` into HTTP status codes. The same primitive could back a CLI or batch processor without re-implementing the locking discipline.
 - **`src/policy.ts :: availableActions(item, currentUser)` is a pure function.** `ActionBar.vue` is a renderer over its return value (`available`, `disabledReason`, `terminalMessage`). The visibility matrix has a name, a single home, and a unit test surface — no template branches encode policy.
+- **Queue urgency is shown by visual cues, not numbers.** Each row has a left border colored by `risk_level`, a `priority` badge when applicable, and a relative timestamp; the top row gets a small "Top of queue" tag. A numerical rank column was considered and dropped — it adds fake precision when the comparator already determines order, and it scans worse on a ~12-row queue.
+
+### Action visibility matrix
+
+| Status | Assigned reviewer | Buttons |
+|---|---|---|
+| `unassigned` | — | `Claim` |
+| `in_review` | current user | `Approve`, `Reject`, `Escalate` |
+| `in_review` | someone else | three buttons disabled, hint with assignee |
+| terminal | — | none, banner with terminal status |
 
 ## What I'd add with more time
 
